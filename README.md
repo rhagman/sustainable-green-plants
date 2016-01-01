@@ -26,3 +26,6 @@ Information about how to build and run the systems will be added to the wiki.
 arduino - contains the arduino sketch file which you need to upload to your arduino uno.
 gnuplot - contains a gnuplot settings file which can be used to plot data reported by the arduino.
 processing - contains a processing sketch file which you can use with processing to get a simple user interface to the arduino. This makes it very easy to change the configuration of the system.
+
+# License
+MIT
