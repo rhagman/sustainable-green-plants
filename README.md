@@ -22,6 +22,9 @@ Information about how to build and run the systems will be added to the wiki.
 	* LED system
   * production aeroponic system
 
+# Working with now
+Added information in the wiki about the list of materials you need for the developer system. Will add more information to this section next week.
+
 # Software instructions
 arduino - contains the arduino sketch file which you need to upload to your arduino uno.
 gnuplot - contains a gnuplot settings file which can be used to plot data reported by the arduino.
