@@ -12,23 +12,25 @@ The project is divided into two parts:
 
 Information about how to build and run the systems will be added to the wiki.
 
-# TODO
-* wiki
-  * developer aeroponic system
-	* electronics/sensors
-	* pluming
-	* buckets and growth environment
-	* nutrient solution
-	* LED system
-  * production aeroponic system
-
-# Working with now
-Added information in the wiki about the list of materials you need for the developer system. Will add more information to this section next week.
-
 # Software instructions
+3d-printing - contains the stl and/or scad files for the 3d-printed parts.
 arduino - contains the arduino sketch file which you need to upload to your arduino uno.
 gnuplot - contains a gnuplot settings file which can be used to plot data reported by the arduino.
 processing - contains a processing sketch file which you can use with processing to get a simple user interface to the arduino. This makes it very easy to change the configuration of the system.
+
+# Working with now
+Adding information to the wiki about the list of materials you need for the developer system. Started with the irrigation and uploaded some of the 3d-printed parts. Now realized that I have lost all my scad-files and that I need to reprint a part in order to build the system.
+
+# TODO
+* wiki
+  * developer system
+	* list of materials
+	* irrigation
+	* electronics/sensors
+	* buckets and growth environment
+	* nutrient solution
+	* LED system
+  * production system
 
 # License
 MIT
