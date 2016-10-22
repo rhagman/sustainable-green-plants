@@ -18,7 +18,7 @@ const int FAN = 7;
 const int BOARDLED = 13; //Pin 13 and Arduino UNO board LED
 const int LIGHT = A0;           // Light sensor, Analog pin 0
 const int runInterval = 1;      // Define delay between the run and measure interval in seconds
-const int measureInterval = 60;
+const int measureInterval = 3600;
 
 
 // Define DHT11 sensor
@@ -78,7 +78,7 @@ int bval = 0;
 
 //Variable for pump
 int pumpOn = 0; //0 off, 1 on
-int nozzleInterval = 20; //min interval between nozzle activation >60 == off
+int nozzleInterval = 10; //min interval between nozzle activation >60 == off
 int nozzleDuration = 1; //2 sec active nozzle <0 == off
 int fanStatus = 0; //0 off, 1 on
 
