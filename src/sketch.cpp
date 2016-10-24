@@ -1,6 +1,9 @@
 /*
  * Work in progress
  */
+#line 2 "sketch.cpp"
+#include <ArduinoUnit.h>
+#include <Arduino.h>
 #include <DHT.h>        // For the DHT11 temperature and humidity sensor
 #include <Time.h>       // For timekeeping
 #include <Wire.h>       // For I2C
@@ -101,13 +104,53 @@ time_t tDelayMin = measureInterval;
 // Sensor data
 int sensorTempData[] = {0,0,0,0,0}; // temp, humid, light, ph, phTwoDecPlaces
 
-void setup() {
-  Wire.begin();       // conects I2C
-  Serial.begin(9600); //Serial port at 9600 baud
-  dht.begin();        //Start the dht object
+int schedule();
+void serialControl();
+void scheduleFromUser();
+void serialReport();
+void setLight();
+void setPump();
+void setNozzle();
+void setFan(int setStatus);
+String timeReport();
+void readSensors();
+void phProbe();
+void calibratepH7(int calnum);
+void calibratepH4(int calnum);
+void calcpHSlope ();
+void calcpH(int raw);
+void reset_Params(void);
+void lightSensor();
+void dhtSensor();
 
-  // Set the time
-  setTime(10,0,0,1,1,2014); // hour,min,sec,day,month,year
+test (turn_on_the_pump_unit) {
+  pumpOn = 1;
+  setPump();
+  assertEqual(HIGH, digitalRead(PUMP));
+}
+
+test (turn_off_the_pump_unit) {
+  pumpOn = 0;
+  setPump();
+  assertEqual(digitalRead(PUMP), LOW);
+}
+
+test(only_run_schedule_after_enought_time_has_passed_integration) {
+  t = 1;
+  tDelay = t + runInterval;
+  assertEqual(1, schedule());
+}
+
+test(run_through_everything_that_is_scheduled_integration) {
+  t = 1;
+  tDelay = t - runInterval;
+  assertEqual(0, schedule());
+  time_t tDelayAfterScheduleRun = t + runInterval;
+  assertEqual(tDelay, tDelayAfterScheduleRun);
+}
+
+void setup () {
+  Serial.begin(9600);
 
   // Set pins as outputs
   pinMode(RED, OUTPUT);
@@ -118,6 +161,21 @@ void setup() {
   pinMode(FAN, OUTPUT);
   pinMode(BOARDLED, OUTPUT);
   digitalWrite(BOARDLED, LOW);
+}
+
+void loop () {
+  Test::run();
+}
+/*
+void setup() {
+  Wire.begin();       // conects I2C
+  Serial.begin(9600); //Serial port at 9600 baud
+  dht.begin();        //Start the dht object
+
+  // Set the time
+  setTime(10,0,0,1,1,2014); // hour,min,sec,day,month,year
+
+
 
   // Read info from eeprom, contains calibration values from before. If this is the first run time, use default probe settings.
   eeprom_read_block(&params, (void *)0, sizeof(params));
@@ -134,8 +192,12 @@ void loop() {
     serialControl();
   }
 
+  schedule();
+}
+*/
+int schedule() {
   if (t < tDelay) {
-    return;
+    return 1;
   }
 
   if (runProgram == 1) {
@@ -154,6 +216,7 @@ void loop() {
     }
     setPump();
   }
+
   if (nozzleInterval-1 == minute(t) % nozzleInterval) {
     if (nozzleDuration > second(t)) {
       digitalWrite(NOZZLE, HIGH);
@@ -167,6 +230,7 @@ void loop() {
       }
     }
   }
+
   if (t >= tDelayMin) {
     readSensors();
 
@@ -181,6 +245,7 @@ void loop() {
   }
 
   tDelay = t + runInterval;
+  return 0;
 }
 
 /*
