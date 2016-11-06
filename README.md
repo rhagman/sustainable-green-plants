@@ -7,7 +7,7 @@ development is currently in alpha so use on your own risk.
 # Introduction
 The goal of this repository is to contain all the information needed to get,
 build and run an aeroponic system. The idea is to design a cheap modular system
-that any one can use.
+that anyone can use.
 
 ## The project is divided into two parts
 1. The development of a small test system which is intended for developers who
