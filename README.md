@@ -1,5 +1,5 @@
 # sustainable green plants
-![Basic kit](https://www.dropbox.com/s/qlf6lq4p6oea1vn/20161231_165125.jpg?dl=0 "Basic kit version in the window")
+![Basic kit](doc/img/basickitexample.jpg?raw=true "Basic kit version in the window")
 
 [DIY aeroponics for the home](https://www.dropbox.com/sh/nx1g1m9xj6oz451/AABnalTH5EBVytOSFOYaLh_Da?dl=0 "Images in Dropbox"),
 development is currently in alpha so use on your own risk.
