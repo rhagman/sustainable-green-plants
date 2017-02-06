@@ -1,11 +1,7 @@
-/*
- * Work in progress
- */
+#include <Arduino.h>
 #include <DHT.h>        // For the DHT11 temperature and humidity sensor
 #include <Time.h>       // For timekeeping
 #include <Wire.h>       // For I2C
-#include <avr/eeprom.h> // For storing calibration and configration in EEPROM
-
 
 //Define LED pins (PWM pins: 3,5,6,9,10,11 on arduino UNO)
 const int RED   = 11;
@@ -24,28 +20,6 @@ const int measureInterval = 3600;
 #define DHTPIN 8         // what pin we're connected to
 #define DHTTYPE DHT11    // DHT 11
 DHT dht(DHTPIN, DHTTYPE);// make the object
-
-
-//----- pH probe code
-#define Write_Check      0x1234
-#define ADDRESS 0x4C // MCP3221 A5 in Dec 77 A0 = 72 A7 = 79)
-                     // A0 = x48, A1 = x49, A2 = x4A, A3 = x4B,
-                     // A4 = x4C, A5 = x4D, A6 = x4E, A7 = x4F
-// Our parameter, for ease of use and eeprom access lets use a struct
-struct parameters_T
-{
-  unsigned int WriteCheck;
-  int pH7Cal, pH4Cal;
-  float pHStep;
-}
-params;
-
-float pH;
-int adc_result;           // Used in function phProbe and case C for calibration of the probe
-const float vRef = 4.096; // Our vRef into the ADC wont be exact Since you can run VCC lower than Vref its best to measure and adjust here
-const float opampGain = 5.25; // What is our Op-Amps gain (stage 1)
-//----- End pH probe code
-
 
 /**
  * User schedule of all settings
@@ -99,7 +73,7 @@ time_t tDelay = runInterval;
 time_t tDelayMin = measureInterval;
 
 // Sensor data
-int sensorTempData[] = {0,0,0,0,0}; // temp, humid, light, ph, phTwoDecPlaces
+int sensorTempData[] = {0,0,0}; // temp, humid, light
 
 void setup() {
   Wire.begin();       // conects I2C
@@ -118,12 +92,6 @@ void setup() {
   pinMode(FAN, OUTPUT);
   pinMode(BOARDLED, OUTPUT);
   digitalWrite(BOARDLED, LOW);
-
-  // Read info from eeprom, contains calibration values from before. If this is the first run time, use default probe settings.
-  eeprom_read_block(&params, (void *)0, sizeof(params));
-  if (params.WriteCheck != Write_Check) {
-    reset_Params();
-  }
 }
 
 void loop() {
@@ -277,32 +245,6 @@ void serialControl()
         }
         break;
       }
-      case 'P':
-      {
-        //Lets read in our parameters and spit out the info!
-         eeprom_read_block(&params, (void *)0, sizeof(params));
-         Serial.print("pH 7 cal: ");
-         Serial.print(params.pH7Cal);
-         Serial.print(" | ");
-         Serial.print("pH 4 cal: ");
-         Serial.print(params.pH4Cal);
-         Serial.print(" | ");
-         Serial.print("pH probe slope: ");
-         Serial.print(params.pHStep);
-         Serial.print(" | ");
-         Serial.print("pH: ");
-         Serial.println(pH);
-         break;
-      }
-      case 'C':
-      {
-        //Which range?
-        int calrange;
-        calrange = Serial.parseInt();
-        if( calrange == 4 ) calibratepH4(adc_result);
-        if( calrange == 7 ) calibratepH7(adc_result);
-        break;
-      }
     }
 }
 
@@ -340,8 +282,7 @@ void serialReport() {
   reportValues = reportValues + fanStatus;
 
   reportValues = timeReport() + "S" + sensorTempData[0] + "," + sensorTempData[1] + ","
-                                    + sensorTempData[2] + "," + sensorTempData[3] + ","
-                                    + sensorTempData[4] + reportValues;
+                                    + sensorTempData[2] + reportValues;
   Serial.println(reportValues);
 }
 
@@ -404,69 +345,7 @@ void readSensors()
 {
   dhtSensor();
   lightSensor();
-  phProbe();
 }
-
-//----- pH functions
-void phProbe()
-{
-  //This is our I2C ADC interface section
-  //We'll assign 2 BYTES variables to capture the LSB and MSB(or Hi Low in this case)
-  byte adc_high;
-  byte adc_low;
-
-  Wire.requestFrom(ADDRESS, 2);        //requests 2 bytes
-  if(Wire.available())
-  {
-  while(Wire.available() < 2);         //while two bytes to receive
-  //Set em
-  adc_high = Wire.read();
-  adc_low = Wire.read();
-  //now assemble them, remembering our byte maths a Union works well here as well
-  adc_result = (adc_high * 256) + adc_low;
-  //We have a our Raw pH reading fresh from the ADC now lets figure out what the pH is
-  calcpH(adc_result);
-
-  sensorTempData[3] = (int) pH;
-  sensorTempData[4] = ((int) (pH*100) - sensorTempData[3]*100); // Calculate the two decimals
-  }
-}
-
-void calibratepH7(int calnum)
-{
-  params.pH7Cal = calnum;
-  calcpHSlope();
-  //write these settings back to eeprom
-  eeprom_write_block(&params, (void *)0, sizeof(params));
-}
-void calibratepH4(int calnum)
-{
-  params.pH4Cal = calnum;
-  calcpHSlope();
-  //write these settings back to eeprom
-  eeprom_write_block(&params, (void *)0, sizeof(params));
-}
-void calcpHSlope ()
-{
-  //RefVoltage * our deltaRawpH / 12bit steps *mV in V / OP-Amp gain /pH step difference 7-4
-  params.pHStep = ((((vRef*(float)(params.pH7Cal - params.pH4Cal))/4096)*1000)/opampGain)/3;
-}
-void calcpH(int raw)
-{
-  float miliVolts = (((float)raw/4096)*vRef)*1000;
-  float temp = ((((vRef*(float)params.pH7Cal)/4096)*1000)- miliVolts)/opampGain;
-  pH = 7-(temp/params.pHStep);
-}
-void reset_Params(void)
-{
-  //Restore to default set of parameters!
-  params.WriteCheck = Write_Check;
-  params.pH7Cal = 2048; //assume ideal probe and amp conditions 1/2 of 4096
-  params.pH4Cal = 1286; //using ideal probe slope we end up this many 12bit units away on the 4 scale
-  params.pHStep = 59.16;//ideal probe slope
-  eeprom_write_block(&params, (void *)0, sizeof(params)); //write these settings back to eeprom
-}
-//----- End pH functions
 
 void lightSensor()
 {
