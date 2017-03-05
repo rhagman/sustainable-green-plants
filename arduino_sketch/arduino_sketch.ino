@@ -25,15 +25,15 @@ DHT dht(DHTPIN, DHTTYPE); // Make the object
  * User schedule of all settings
  * (7 settings, 1-9 predefined settinggroups, 1-7 days with 1h resolution)
  */
-int num_usr_settings = 2;        // Setting sets available (Default: 2)
+int num_usr_settings = 3;        // Setting sets available (Default: 3)
 int num_usr_settings_day = 1;    // Day setting sets available (Default: 1)
 const int NUM_SETTINGS = 7;      // Day setting sets
 const int NUM_SETTINGS_DAY = 24; // Hour setting sets
 // Setting sets
 int usrSch[9][NUM_SETTINGS] = {
-  {0,0,0,0,20,2,0}, // Spray the roots at a set interval and duration (Default)
-  {0,0,0,1,20,2,0}, // Run the pump (Default)
-  {25,25,0,0,20,2,0},
+  {0,0,0,0,15,2,0}, // Spray the roots at a set interval and duration (Default)
+  {0,0,0,1,15,2,0}, // Run the pump (Default)
+  {0,0,0,0,20,2,0}, // Night setting (Default)
   {25,25,25,0,20,2,0},
   {50,50,50,0,20,2,0},
   {100,100,100,0,20,2,0},
@@ -43,13 +43,13 @@ int usrSch[9][NUM_SETTINGS] = {
 };
 // Day setting sets (0:00-23:00)
 int usrSchInd[NUM_SETTINGS][NUM_SETTINGS_DAY] = {
-  {0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0}, // Pump at 10:00 and 20:00
-  {0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0},
-  {0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0},
-  {0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0},
-  {0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0},
-  {0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0},
-  {0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0}
+  {2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,1,2,2,2}, // Pump at 10:00 and 20:00
+  {2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,1,2,2,2},
+  {2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,1,2,2,2},
+  {2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,1,2,2,2},
+  {2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,1,2,2,2},
+  {2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,1,2,2,2},
+  {2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,1,2,2,2}
 };
 
 // Variables for RGB levels
