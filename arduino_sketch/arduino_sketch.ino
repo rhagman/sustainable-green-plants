@@ -1,67 +1,30 @@
 #include <Arduino.h>
-#include <DHT.h>        // For the DHT11 temperature and humidity sensor
-#include <Time.h>       // For timekeeping
-#include <Wire.h>       // For I2C
+#include <TimeLib.h>  // For timekeeping
 
-// Define LED pins (PWM pins: 3,5,6,9,10,11 on arduino UNO)
-const int RED   = 11;
-const int GREEN = 10;
-const int BLUE  = 9;
-const int PUMP  = 2;
-const int NOZZLE = 12;
-const int FAN = 7;
-const int BOARDLED = 13; // Pin 13 and Arduino UNO board LED
-const int LIGHT = A0;    // Light sensor, Analog pin 0
+// LED pins (PWM pins: 3,5,6,9,10,11 on arduino UNO)
+const int PUMP  = 4;  // Pin 4 on arduino maps to D2 on wemos
+const int NOZZLE = 5; // Pin 5 on arduino maps to D1 on wemos
 const int runInterval = 1;
-const int measureInterval = 3600;
-
-
-// Define DHT11 sensor
-#define DHTPIN 8          // What pin we're connected to
-#define DHTTYPE DHT11     // DHT 11
-DHT dht(DHTPIN, DHTTYPE); // Make the object
+const int pumpMaxRunTime = 9;
 
 /**
- * User schedule of all settings
- * (7 settings, 1-9 predefined settinggroups, 1-7 days with 1h resolution)
+ * Schedule of all settings
  */
-int num_usr_settings = 3;        // Setting sets available (Default: 3)
-int num_usr_settings_day = 1;    // Day setting sets available (Default: 1)
-const int NUM_SETTINGS = 7;      // Day setting sets
-const int NUM_SETTINGS_DAY = 24; // Hour setting sets
-// Setting sets
-int usrSch[9][NUM_SETTINGS] = {
-  {0,0,0,0,15,2,0}, // Spray the roots at a set interval and duration (Default)
-  {0,0,0,1,15,2,0}, // Run the pump (Default)
-  {0,0,0,0,20,2,0}, // Night setting (Default)
-  {25,25,25,0,20,2,0},
-  {50,50,50,0,20,2,0},
-  {100,100,100,0,20,2,0},
-  {100,100,100,0,20,2,0},
-  {100,100,100,0,20,2,0},
-  {100,100,100,0,20,2,0}
+int usrSch[3][3] = {
+  {0,10,5}, // Spray the roots at a set interval and duration (Default)
+  {1,10,5}, // Run the pump (Default)
+  {0,10,5}  // Night setting (Default)
 };
-// Day setting sets (0:00-23:00)
-int usrSchInd[NUM_SETTINGS][NUM_SETTINGS_DAY] = {
-  {2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,1,2,2,2}, // Pump at 10:00 and 20:00
-  {2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,1,2,2,2},
-  {2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,1,2,2,2},
-  {2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,1,2,2,2},
-  {2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,1,2,2,2},
-  {2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,1,2,2,2},
-  {2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,1,2,2,2}
+// Day setting set (0:00-23:00)
+int usrSchInd[1][24] = {
+  {2,2,2,2,2,2,2,2,2,0,0,0,1,0,0,0,0,0,0,0,0,2,2,2} // Pump at 12:00
 };
 
-// Variables for RGB levels
-int rval = 0;
-int gval = 0;
-int bval = 0;
 
 // Variable for pump
 int pumpOn = 0; // 0 off, 1 on
-int nozzleInterval = 20; // min interval between nozzle activation >60 == off
-int nozzleDuration = 2; // 2 sec active nozzle <0 == off
-int fanStatus = 0; // 0 off, 1 on
+int nozzleInterval = 10; // min interval between nozzle activation >60 == off
+int nozzleDuration = 5;  // sec active nozzle <0 == off
 
 // Run preprogrammed setup, oneReport after nozzle on
 int runProgram = 1;
@@ -70,54 +33,38 @@ int oneReport = 0;
 // Time
 time_t t = 0;
 time_t tDelay = runInterval;
-time_t tDelayMin = measureInterval;
-
-// Sensor data
-int sensorTempData[] = {0,0,0}; // temp, humid, light
 
 void setup() {
-  Wire.begin();       // Connects I2C
   Serial.begin(9600); // Serial port at 9600 baud
-  dht.begin();        // Start the dht object
 
   // Set the time
-  setTime(20,0,0,1,1,2014); // hour,min,sec,day,month,year
+  setTime(12,0,0,1,1,2014); // hour,min,sec,day,month,year
 
   // Set pins as outputs
-  pinMode(RED, OUTPUT);
-  pinMode(GREEN, OUTPUT);
-  pinMode(BLUE, OUTPUT);
   pinMode(PUMP, OUTPUT);
   pinMode(NOZZLE, OUTPUT);
-  pinMode(FAN, OUTPUT);
-  pinMode(BOARDLED, OUTPUT);
-  digitalWrite(BOARDLED, LOW);
+  pinMode(LED_BUILTIN, OUTPUT); // Pin 13 on arduino and 2 on wemos
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 void loop() {
   t = now();
-
   // Keep working as long as data is in the buffer
   while (Serial.available() > 0) {
     serialControl();
   }
-
   if (t < tDelay) {
     return;
   }
 
   if (runProgram == 1) {
     scheduleFromUser();
-    setLight();
-    setFan(fanStatus);
 
     /**
      * The scheduling is per hour, but running the pump for that long is
-     * unnessesary since it only takes about 30s to fill the pressure
-     * accumulator.
-     * Only run the pump during the first minute of the scheduled hour.
+     * unnessesary so have a maximum run time that is less than 60 min.
      */
-    if (pumpOn == 1 && minute(t) > 0) {
+    if (pumpOn == 1 && minute(t) > pumpMaxRunTime) {
       pumpOn = 0;
     }
     setPump();
@@ -135,26 +82,14 @@ void loop() {
       }
     }
   }
-  if (t >= tDelayMin) {
-    readSensors();
-
-    if (sensorTempData[0] >= 30 || sensorTempData[1] >= 50) {
-      setFan(1);
-    }
-    if (sensorTempData[0] < 30 && sensorTempData[1] < 50) {
-      setFan(0);
-    }
-
-    tDelayMin = t + measureInterval;
-  }
 
   tDelay = t + runInterval;
 }
 
 /*
  * Messages consist of the letter S followed by
- * int(0-255),int(0-255),int(0-255),int(0-1),int(0-30),int(0-10),int(0-1)
- * S,255,255,255,0,20,5,0 (R,G,B,pump,nozzlieInterval,nozzleDuration,fan)
+ * ,int(0-1),int(0-59),int(0-59)
+ * S,0,20,5 (pump,nozzlieInterval,nozzleDuration)
  */
 void serialControl()
 {
@@ -162,23 +97,16 @@ void serialControl()
     switch (c) {
       case 'S':
       {
-        rval   = Serial.parseInt();         // First valid integer
-        gval   = Serial.parseInt();         // Second valid integer
-        bval   = Serial.parseInt();         // Third valid integer
-        pumpOn = Serial.parseInt();         // Fourth valid integer
-        nozzleInterval = Serial.parseInt(); // Fifth valid integer
-        nozzleDuration = Serial.parseInt(); // Sixth valid integer
-        fanStatus = Serial.parseInt();      // Seventh valid integer
+        pumpOn = Serial.parseInt();
+        nozzleInterval = Serial.parseInt();
+        nozzleDuration = Serial.parseInt();
 
-        setLight();
         setPump();
         setNozzle();
-        setFan(fanStatus);
         break;
       }
       case 'R':
       {
-        readSensors();
         serialReport();
         break;
       }
@@ -202,45 +130,6 @@ void serialControl()
         setTime(h,m,0,d,1,2014);    //hour,min,sec,day,month,year
         t = now();
         tDelay = runInterval;
-        tDelayMin = measureInterval;
-        break;
-      }
-      case 'U':
-      {
-        int k = 0;
-        num_usr_settings = Serial.parseInt(); // The first int is the number
-        while (k < num_usr_settings) {        // of user settings from the user
-          for (int i = 0; i < NUM_SETTINGS; i++) {
-            usrSch[k][i] = Serial.parseInt();
-            Serial.print(usrSch[k][i]);
-            if (i == NUM_SETTINGS - 1) {
-              k++;
-              Serial.println("");
-            }
-            else {
-              Serial.print(",");
-            }
-          }
-        }
-        break;
-      }
-      case 'I':
-      {
-        int k = 0;
-        num_usr_settings_day = Serial.parseInt();
-        while (k < num_usr_settings_day) {
-          for (int i = 0; i < NUM_SETTINGS_DAY; i++) {
-            usrSchInd[k][i] = Serial.parseInt();
-            Serial.print(usrSchInd[k][i]);
-            if (i == NUM_SETTINGS_DAY - 1) {
-              k++;
-              Serial.println("");
-            }
-            else{
-              Serial.print(",");
-            }
-          }
-        }
         break;
       }
     }
@@ -249,48 +138,11 @@ void serialControl()
 void scheduleFromUser() {
   // Change every hour
   int x = hour(t); // 0-23
-  int y = day(t) % num_usr_settings_day; // Rotate the days
-  int z = usrSchInd[y][x];
+  int z = usrSchInd[0][x];
 
-  rval = usrSch[z][0];
-  gval = usrSch[z][1];
-  bval = usrSch[z][2];
-  pumpOn = usrSch[z][3];
-  nozzleInterval = usrSch[z][4];
-  nozzleDuration = usrSch[z][5];
-  fanStatus = usrSch[z][6];
-}
-
-void serialReport() {
-  String reportValues;
-
-  reportValues = "R";
-  reportValues = reportValues + rval;
-  reportValues = reportValues + ",";
-  reportValues = reportValues + gval;
-  reportValues = reportValues + ",";
-  reportValues = reportValues + bval;
-  reportValues = reportValues + ",";
-  reportValues = reportValues + pumpOn;
-  reportValues = reportValues + ",";
-  reportValues = reportValues + nozzleInterval;
-  reportValues = reportValues + ",";
-  reportValues = reportValues + nozzleDuration;
-  reportValues = reportValues + ",";
-  reportValues = reportValues + fanStatus;
-
-  reportValues = timeReport() + "S" + sensorTempData[0] + ","
-                                    + sensorTempData[1] + ","
-                                    + sensorTempData[2] + reportValues;
-  Serial.println(reportValues);
-}
-
-void setLight()
-{
-  // Set LED (value between 0 and 255)
-  analogWrite(RED, rval);
-  analogWrite(GREEN, gval);
-  analogWrite(BLUE, bval);
+  pumpOn = usrSch[z][0];
+  nozzleInterval = usrSch[z][1];
+  nozzleDuration = usrSch[z][2];
 }
 
 /**
@@ -312,20 +164,25 @@ void setNozzle()
   }
 }
 
-void setFan(int setStatus)
-{
-  if (setStatus == 1) {
-    digitalWrite(FAN, HIGH);
-  }
-  if (setStatus == 0) {
-    digitalWrite(FAN, LOW);
-  }
+void serialReport() {
+  String reportValues;
+
+  reportValues = "Settings:\n";
+  reportValues = "Pump(0=off, 1=on):      ";
+  reportValues = reportValues + pumpOn;
+  reportValues = reportValues + "\nMinutes between sprays: ";
+  reportValues = reportValues + nozzleInterval;
+  reportValues = reportValues + "\nSeconds of spray:       ";
+  reportValues = reportValues + nozzleDuration;
+
+  reportValues = "-- Report ----\n" + timeReport() + reportValues;
+  Serial.println(reportValues);
 }
 
 String timeReport() {
   String timeString;
 
-  timeString = "T";
+  timeString = "Time(dd:hh:mm:ss):      ";
   timeString = timeString + day(t);
   timeString = timeString + ":";
   timeString = timeString + hour(t);
@@ -333,41 +190,7 @@ String timeReport() {
   timeString = timeString + minute(t);
   timeString = timeString + ":";
   timeString = timeString + second(t);
+  timeString = timeString + "\n";
 
   return timeString;
-}
-
-void readSensors()
-{
-  dhtSensor();
-  lightSensor();
-}
-
-void lightSensor()
-{
-  //int MIN_LIGHT = 200;
-  //int MAX_LIGHT = 900;
-  int val;
-
-  val = analogRead(LIGHT);
-  //val = map(val,MIN_LIGHT,MAX_LIGHT,0,255); // map analog 1024 -> digital pwm 256
-  //val = constrain(val,0,255); // lowest and highest value of val allowed
-
-  sensorTempData[2] = val;
-}
-
-void dhtSensor()
-{
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
-
-  // check if returns are valid, if NaN (not a number) then set to 0
-  if (isnan(t) || isnan(h)) {
-    sensorTempData[0] = 0;
-    sensorTempData[1] = 0;
-  }
-  else {
-    sensorTempData[0] = (int)t;
-    sensorTempData[1] = (int)h;
-  }
 }
