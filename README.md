@@ -1,4 +1,4 @@
-![Basic kit](docs/img/basickitexample.jpg?raw=true "Basic kit version in the window")
+![Basic kit](docs/img/20170617_124908.jpg "Small and modular DIY kit")
 
 The development is currently in alpha, but you can of course try it out. [These images](https://www.dropbox.com/sh/nx1g1m9xj6oz451/AABnalTH5EBVytOSFOYaLh_Da?dl=0 "Images in Dropbox"), along with the details I provide below, can help you to get started.
 
