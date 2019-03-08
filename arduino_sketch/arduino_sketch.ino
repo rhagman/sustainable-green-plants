@@ -5,15 +5,15 @@
 const int PUMP  = 4;  // Pin 4 on arduino maps to D2 on wemos
 const int NOZZLE = 5; // Pin 5 on arduino maps to D1 on wemos
 const int runInterval = 1;
-const int pumpMaxRunTime = 9;
+const int pumpMaxRunTime = 0;
 
 /**
  * Schedule of all settings
  */
 int usrSch[3][3] = {
-  {0,10,5}, // Spray the roots at a set interval and duration (Default)
-  {1,10,5}, // Run the pump (Default)
-  {0,10,5}  // Night setting (Default)
+  {0,10,1}, // Spray the roots at a set interval and duration (Default)
+  {1,10,1}, // Run the pump (Default)
+  {0,10,1}  // Night setting (Default)
 };
 // Day setting set (0:00-23:00)
 int usrSchInd[1][24] = {
@@ -24,7 +24,7 @@ int usrSchInd[1][24] = {
 // Variable for pump
 int pumpOn = 0; // 0 off, 1 on
 int nozzleInterval = 10; // min interval between nozzle activation >60 == off
-int nozzleDuration = 5;  // sec active nozzle <0 == off
+int nozzleDuration = 1;  // sec active nozzle <0 == off
 
 // Run preprogrammed setup, oneReport after nozzle on
 int runProgram = 1;
