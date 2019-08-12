@@ -55,7 +55,7 @@ jobs:
     - platformio ci --project-conf=platformio.ini
   - name: Validate wiki markdown
     install:
-    - docker build -t wiki-validator -f test/Dockerfile
+    - docker build -t wiki-validator -f test/Dockerfile .
     script:
     - docker run wiki-validator
     # This shouldn't fail PRs, so once we're happy with the method we can gate it like this:
