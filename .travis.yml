@@ -27,6 +27,7 @@
 language: python
 python:
     - "2.7"
+services: docker
 
 # Cache PlatformIO packages using Travis CI container-based infrastructure
 sudo: false
@@ -34,10 +35,11 @@ cache:
     directories:
         - "~/.platformio"
 
-env:
-    - PLATFORMIO_CI_SRC=arduino_sketch/arduino_sketch.ino
-
 install:
+jobs:
+  include:
+  - name: Test platformio
+    install:
     - pip install -U platformio
 
     #
@@ -47,5 +49,17 @@ install:
     # http://platformio.org/lib/show/44/Time
 
     - platformio lib -g install 19 44
-script:
+    env:
+    - PLATFORMIO_CI_SRC=arduino_sketch/arduino_sketch.ino
+    script:
     - platformio ci --project-conf=platformio.ini
+  - name: Validate wiki markdown
+    install:
+    - docker build -t wiki-validator -f test/Dockerfile
+    script:
+    - docker run wiki-validator
+    # This shouldn't fail PRs, so once we're happy with the method we can gate it like this:
+    # - 'if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then docker run wiki-validator; fi'
+    
+
+
