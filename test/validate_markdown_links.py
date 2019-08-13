@@ -15,6 +15,10 @@ HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36',
 }
 
+# We'll skip urls with these strings in them, to avoid TOS violations
+# Also amazon is apparently pretty good at blocking bots
+SKIPS = ['amazon.com']
+
 
 def main(argv):
     target = argv[-1]
@@ -26,6 +30,8 @@ def main(argv):
             with open(os.path.join(target, filename), 'r') as f:
                 links = markdown_link_extractor.getlinks(f.read())
                 for link in links:
+                    if any(skip in link for skip in SKIPS):
+                        continue
                     validation = validate_link(link)
                     if not validation['valid']:
                         return_code = 1
