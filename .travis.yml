@@ -55,11 +55,9 @@ jobs:
     - platformio ci --project-conf=platformio.ini
   - name: Validate wiki markdown
     install:
-    - docker build -t wiki-validator -f test/Dockerfile .
+    - pip install pyyaml markdown_link_extractor requests
+    - git clone https://github.com/rhagman/sustainable-green-plants.wiki.git wiki
     script:
-    - docker run wiki-validator
+    - python test/validate_markdown_links.py wiki
     # This shouldn't fail PRs, so once we're happy with the method we can gate it like this:
-    # - 'if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then docker run wiki-validator; fi'
-    
-
-
+    # - 'if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then python test/validate_wiki_markdown.py wiki ; fi
