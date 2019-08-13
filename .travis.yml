@@ -27,11 +27,12 @@
 language: python
 python:
     - "2.7"
-services: docker
+    - "3.7"
 
 # Cache PlatformIO packages using Travis CI container-based infrastructure
 sudo: false
 cache:
+    pip: true
     directories:
         - "~/.platformio"
 
@@ -39,6 +40,7 @@ install:
 jobs:
   include:
   - name: Test platformio
+    python: '2.7'
     install:
     - pip install -U platformio
 
@@ -54,6 +56,7 @@ jobs:
     script:
     - platformio ci --project-conf=platformio.ini
   - name: Validate wiki markdown
+    python: '3.7'
     install:
     - pip install pyyaml markdown_link_extractor requests
     - git clone https://github.com/rhagman/sustainable-green-plants.wiki.git wiki
