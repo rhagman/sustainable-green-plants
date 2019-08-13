@@ -25,19 +25,19 @@
 #
 
 language: python
-python:
-    - "2.7"
-
 # Cache PlatformIO packages using Travis CI container-based infrastructure
 sudo: false
 cache:
+    pip: true
     directories:
         - "~/.platformio"
 
-env:
-    - PLATFORMIO_CI_SRC=arduino_sketch/arduino_sketch.ino
-
 install:
+jobs:
+  include:
+  - name: Test platformio
+    python: '2.7'
+    install:
     - pip install -U platformio
 
     #
@@ -47,5 +47,16 @@ install:
     # http://platformio.org/lib/show/44/Time
 
     - platformio lib -g install 19 44
-script:
+    env:
+    - PLATFORMIO_CI_SRC=arduino_sketch/arduino_sketch.ino
+    script:
     - platformio ci --project-conf=platformio.ini
+  - name: Validate wiki markdown
+    python: '3.7'
+    install:
+    - pip install pyyaml markdown_link_extractor requests
+    - git clone https://github.com/rhagman/sustainable-green-plants.wiki.git wiki
+    script:
+    - python test/validate_markdown_links.py wiki
+    # This shouldn't fail PRs, so once we're happy with the method we can gate it like this:
+    # - 'if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then python test/validate_wiki_markdown.py wiki ; fi
